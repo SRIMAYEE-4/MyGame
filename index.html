@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Valentine Escape</title>
+
+<style>
+body{
+  margin:0;
+  background:radial-gradient(circle at center,#0a0f2a,#000);
+  font-family:Arial, sans-serif;
+  color:white;
+  text-align:center;
+  overflow:hidden;
+}
+
+#info{
+  padding:10px;
+  font-size:18px;
+}
+
+/* BOARD */
+#board{
+  position:relative;
+  width:92vw;
+  max-width:360px;
+  height:460px;
+  margin:auto;
+  border-radius:25px;
+  border:3px solid #00e5ff;
+  box-shadow:0 0 20px #00e5ff, inset 0 0 30px #00e5ff;
+  overflow:hidden;
+}
+
+/* PLAYER */
+.player{
+  position:absolute;
+  width:45px;
+  height:45px;
+  background:#ff2ea6;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  box-shadow:0 0 20px #ff2ea6,0 0 40px #ff2ea6;
+  z-index:10;
+}
+
+/* BOXES */
+.box{
+  position:absolute;
+  padding:4px 8px;
+  font-size:10px;
+  border-radius:20px;
+  border:2px solid #00e5ff;
+  box-shadow:0 0 8px #00e5ff;
+  background:rgba(0,0,0,0.6);
+  white-space:nowrap;
+}
+
+.destination{
+  border:2px solid #ff2ea6;
+  box-shadow:0 0 15px #ff2ea6;
+}
+
+/* CONTROLS */
+.controls{
+  margin-top:10px;
+}
+
+.control-row{
+  display:flex;
+  justify-content:center;
+}
+
+button{
+  width:70px;
+  height:70px;
+  margin:6px;
+  font-size:24px;
+  border-radius:50%;
+  border:2px solid #00e5ff;
+  background:rgba(0,0,0,0.8);
+  color:#00e5ff;
+  box-shadow:0 0 12px #00e5ff;
+}
+
+button:active{
+  transform:scale(0.9);
+}
+
+/* POPUP */
+#popup{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  padding:25px 35px;
+  border-radius:20px;
+  font-size:20px;
+  text-align:center;
+  box-shadow:0 0 30px;
+  display:none;
+  z-index:100;
+}
+
+.retryBtn{
+  margin-top:15px;
+  padding:8px 20px;
+  border:none;
+  border-radius:20px;
+  font-size:16px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="info">
+  ⏳ Time: <span id="timer">30</span>
+</div>
+
+<div id="board">
+  <div class="player" id="player">Me</div>
+
+  <div class="box" id="b1">bhaiii</div>
+  <div class="box" id="b2">Dost</div>
+  <div class="box" id="b3">bestie</div>
+  <div class="box" id="b4">kuch nhi</div>
+  <div class="box" id="b5">Pagal</div>
+  <div class="box" id="b6">Pagal</div>
+
+  <div class="box destination" id="goal">Destination</div>
+</div>
+
+<div class="controls">
+  <div class="control-row">
+    <button onclick="move('up')">⬆</button>
+  </div>
+  <div class="control-row">
+    <button onclick="move('left')">⬅</button>
+    <button onclick="move('down')">⬇</button>
+    <button onclick="move('right')">➡</button>
+  </div>
+</div>
+
+<div id="popup">
+  <div id="popupText"></div>
+</div>
+
+<script>
+
+let player=document.getElementById("player");
+let board=document.getElementById("board");
+let goal=document.getElementById("goal");
+
+let time, pos, boxes;
+let timerInterval, boxInterval;
+let gameActive=true;
+
+function initGame(){
+
+  time=30;
+  gameActive=true;
+
+  document.getElementById("timer").innerText=time;
+
+  pos={x:20,y:20};
+  player.style.left=pos.x+"px";
+  player.style.top=pos.y+"px";
+
+  boxes=[
+   {el:b1,x:100,y:50,dx:1,dy:1},
+   {el:b2,x:30,y:120,dx:-1,dy:1},
+   {el:b3,x:200,y:130,dx:1,dy:-1},
+   {el:b4,x:30,y:230,dx:1,dy:1},
+   {el:b5,x:200,y:230,dx:-1,dy:1},
+   {el:b6,x:120,y:320,dx:1,dy:-1}
+  ];
+
+  boxes.forEach(b=>{
+    b.el.style.left=b.x+"px";
+    b.el.style.top=b.y+"px";
+  });
+
+  goal.style.left="200px";
+  goal.style.top="400px";
+
+  clearInterval(timerInterval);
+  clearInterval(boxInterval);
+
+  timerInterval=setInterval(updateTimer,1000);
+  boxInterval=setInterval(moveBoxes,30);
+
+  document.getElementById("popup").style.display="none";
+}
+
+function move(dir){
+  if(!gameActive) return;
+
+  let step=20;
+
+  if(dir=="up")pos.y-=step;
+  if(dir=="down")pos.y+=step;
+  if(dir=="left")pos.x-=step;
+  if(dir=="right")pos.x+=step;
+
+  if(pos.x<0)pos.x=0;
+  if(pos.y<0)pos.y=0;
+  if(pos.x>board.clientWidth-45)pos.x=board.clientWidth-45;
+  if(pos.y>board.clientHeight-45)pos.y=board.clientHeight-45;
+
+  player.style.left=pos.x+"px";
+  player.style.top=pos.y+"px";
+
+  checkWin();
+}
+
+function moveBoxes(){
+  if(!gameActive) return;
+
+  boxes.forEach(b=>{
+    b.x+=b.dx;
+    b.y+=b.dy;
+
+    if(b.x<=0||b.x>=board.clientWidth-80)b.dx*=-1;
+    if(b.y<=0||b.y>=board.clientHeight-40)b.dy*=-1;
+
+    b.el.style.left=b.x+"px";
+    b.el.style.top=b.y+"px";
+
+    if(collide(player,b.el)){
+      endGame("😡 Ab toh tumhara Game Over 😡<br><br><button class='retryBtn' onclick='initGame()'>Retry</button>","#ff6a00");
+    }
+  });
+}
+
+function collide(a,b){
+  let r1=a.getBoundingClientRect();
+  let r2=b.getBoundingClientRect();
+  return !(r1.right<r2.left||
+           r1.left>r2.right||
+           r1.bottom<r2.top||
+           r1.top>r2.bottom);
+}
+
+function checkWin(){
+  if(collide(player,goal)){
+    endGame("💖 Hey My Valentine 💖<br><br>You reached my heart ❤️<br><br><button class='retryBtn' onclick='initGame()'>Play Again</button>","#ff003c");
+  }
+}
+
+function updateTimer(){
+  time--;
+  document.getElementById("timer").innerText=time;
+
+  if(time<=0){
+    endGame("😡 abb to tera Game Over bacchu 😡<br><br><button class='retryBtn' onclick='initGame()'>Retry</button>","#ff6a00");
+  }
+}
+
+function endGame(message,color){
+  gameActive=false;
+  clearInterval(timerInterval);
+  clearInterval(boxInterval);
+
+  let popup=document.getElementById("popup");
+  let text=document.getElementById("popupText");
+
+  text.innerHTML=message;
+  popup.style.background=color;
+  popup.style.boxShadow="0 0 30px "+color+",0 0 60px "+color;
+  popup.style.display="block";
+}
+
+initGame();
+
+</script>
+
+</body>
+</html>
